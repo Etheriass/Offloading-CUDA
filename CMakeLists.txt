@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(EnlargindTensors)
+project(EnlargingTensors)
 
 #------------------------------------------------------------------------------
 # Compiler optimization
@@ -52,7 +52,7 @@ add_subdirectory(src)
 #-----------------------------------------------------------------------------
 # Testing Sources
 #-----------------------------------------------------------------------------
-if(CMAKE_PROJECT_NAME STREQUAL EnlargindTensors AND BUILD_TESTING)
+if(CMAKE_PROJECT_NAME STREQUAL EnlargingTensors AND BUILD_TESTING)
     add_subdirectory(test)
 endif()
 
