@@ -1,0 +1,4 @@
+vcc off_vector.cu -o main main.cu -lcudart -rdc=true 
+
+-lcudart: link the CUDA runtime libraries
+-rdc=true: enable relocatable device code

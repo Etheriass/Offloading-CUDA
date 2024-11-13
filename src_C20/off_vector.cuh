@@ -1,6 +1,7 @@
 #ifndef OFF_VECTOR_CUH
 #define OFF_VECTOR_CUH
 
+#include <cuda_runtime.h>
 #include <string>
 #include <atomic>
 
@@ -18,20 +19,26 @@ private:
     __host__ void load_chunk(size_t start, size_t chunk_size);
 
 public:
+    cudaEvent_t needLoadEvent; // Event to signal the host
     OffVector(size_t N, std::string filename);
     ~OffVector();
 
-    __device__ __host__ float& operator[](size_t i)
+    __device__ float& operator[](size_t i)
     {
+        printf("Accessing element %lu:", i);
         if (i >= *d_size)
         {
+            printf("\nNeed to load...\n");
             *d_need_load = true;
-            while (i >= *d_size)
-            {} // Wait for data to be loaded
+
+            // Trigger the need load event to notify the host
+            cudaEventRecord(needLoadEvent, 0); // Record event on the default stream
+            
+            while (i >= *d_size) {} // Wait for data to be loaded
         }
-        return d_data[i];
+        return d_data[i%size];
     }
-    __host__ void check_and_load();
+    __host__ void check_and_load(cudaStream_t stream);
 };
 
 #endif
