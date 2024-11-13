@@ -4,10 +4,11 @@
 
 __global__ void kernel(OffVector M){
 
-    for (int i = 0; i < 10; i++){
+    for (int i = 0; i < 11; i++){
         printf("%f\n", M[i]);
     }
 }
+
 
 int main() {
     std::cout << "Starting" << std::endl;
@@ -21,37 +22,44 @@ int main() {
     cudaStreamCreate(&kernelStream);
     cudaStreamCreate(&loadStream);
 
+    // Create event to monitor kernel completion
+    cudaEvent_t kernelDoneEvent;
+    cudaEventCreate(&kernelDoneEvent);
+
     // Launch kernel in kernelStream
     kernel<<<1, 1, 0, kernelStream>>>(M);
+    cudaEventRecord(kernelDoneEvent, kernelStream); // Record completion event
+    cudaError_t error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        std::cerr << "Kernel launch error: " << cudaGetErrorString(error) << std::endl;
+        return -1;
+    }
 
-    int i = 0;
     while (!finished) {
-        i++;
         std::cout << "Waiting for event..." << std::endl;
-        printf("i: %d\n", i);
-        // Wait for the "need load" event
-        cudaError_t eventStatus = cudaEventQuery(M.needLoadEvent);
-        if (eventStatus == cudaSuccess) {
-            printf("Event triggered\n");
-            // Event triggered: load next chunk in loadStream
-            M.check_and_load(loadStream);
-            cudaStreamSynchronize(loadStream);
-
-            // Reset the event for the next load
-            cudaEventRecord(M.needLoadEvent, kernelStream);
-        } else if (eventStatus != cudaErrorNotReady) {
-            // Check if there was an error other than "not ready"
-            std::cerr << "Error waiting for event: " << cudaGetErrorString(eventStatus) << std::endl;
+        
+        // Check if kernel has finished
+        cudaError_t status = cudaStreamQuery(kernelStream);
+        if (status == cudaSuccess) {
             finished = true;
+        } else if (status == cudaErrorNotReady) {
+            bool need_load;
+            cudaMemcpyAsync(&need_load, M.d_need_load, sizeof(bool), cudaMemcpyDeviceToHost, loadStream);
+            cudaStreamSynchronize(loadStream);
+            if (need_load) {
+                M.check_and_load(loadStream);
+                cudaStreamSynchronize(loadStream);
+            }
         } else {
-            // Event not ready: continue processing
-            std::cout << "Event not ready" << std::endl;
+            std::cerr << "Error in kernel execution: " << cudaGetErrorString(status) << std::endl;
+            finished = true;
         }
     }
 
     // Cleanup
     cudaStreamDestroy(kernelStream);
     cudaStreamDestroy(loadStream);
+    cudaEventDestroy(kernelDoneEvent);
 
     return 0;
 }
