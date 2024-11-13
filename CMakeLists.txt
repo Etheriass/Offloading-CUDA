@@ -1,5 +1,9 @@
-cmake_minimum_required(VERSION 3.10)
-project(EnlargingTensors)
+cmake_minimum_required(VERSION 3.22)
+
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_ARCHITECTURES 80)
+project(EnlargingTensors LANGUAGES CUDA CXX)
 
 #------------------------------------------------------------------------------
 # Compiler optimization

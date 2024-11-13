@@ -1,6 +1,7 @@
 // #include <string>
 #include <iostream> // for cout
 #include <random> // fir random, gen..
+#include <stdfloat> // for bfloat16_t
 #include <fstream> // for ofstream, file
 
 #define SIZE 10
@@ -13,7 +14,7 @@ void generate(const std::string& filename, size_t N){
     std::uniform_real_distribution<float> dis(0.0f,1.0f);
 
     // init and fill matrix
-    std::vector<float> M(N * N);
+    std::vector<std::bfloat16_t> M(N * N);
     std::cout << M.max_size() << std::endl;
     if (M.max_size() < N*N){
         throw std::runtime_error("TOO BIG");
@@ -21,7 +22,7 @@ void generate(const std::string& filename, size_t N){
 
     for (size_t i = 0; i < N*N; i++){
         float c = dis(gen);
-        float b = static_cast<float>(c);
+        std::bfloat16_t b = static_cast<std::bfloat16_t>(c);
         // std::cout << "float: " << c << ", bfloat: " << b << std::endl;
         std::cout << b << std::endl;
         M[i] = b;
@@ -34,7 +35,7 @@ void generate(const std::string& filename, size_t N){
     }
 
     // write to file
-    file.write(reinterpret_cast<const char*>(M.data()), M.size() * sizeof(float));
+    file.write(reinterpret_cast<const char*>(M.data()), M.size() * sizeof(std::bfloat16_t));
 
     file.close();
     if (!file.good()){

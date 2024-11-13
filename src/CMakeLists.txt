@@ -1,34 +1,24 @@
-#------------------------------------------------------------------------------
-# Include Header Directories
-#------------------------------------------------------------------------------
-include_directories(${CMAKE_SOURCE_DIR}/include)
+# cmake_minimum_required(VERSION 3.22)
 
+# set(CMAKE_CUDA_STANDARD 17)
+# set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+# set(CMAKE_CUDA_ARCHITECTURES 80)
+# project(EnlargingTensors LANGUAGES CUDA CXX)
 
-#------------------------------------------------------------------------------
-# Build Helloworld DB
-#------------------------------------------------------------------------------
-add_executable(hello_world ${CMAKE_CURRENT_SOURCE_DIR}/hello_world.cc)
-# add_dependencies(hello_world database_lib)
-# target_link_libraries(hello_world database_lib)
+add_library(main STATIC main.cu)
+set_source_files_properties(main.cu PROPERTIES LANGUAGE CUDA)
+set_target_properties(main PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+#        CUDA_RUNTIME_LIBRARY Shared
+#        POSITION_INDEPENDENT_CODE ON
+)
 
-
-#------------------------------------------------------------------------------
-# Add libraries + executables to CMake install
-#------------------------------------------------------------------------------
-install(
-        TARGETS
-        hello_world
-        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-
-#-----------------------------------------------------------------------------
-# Add header file(s) to CMake Install
-#-----------------------------------------------------------------------------
-# install(
-#         FILES
-#         ${CMAKE_SOURCE_DIR}/include/database_lib.h
-#         DESTINATION
-#         ${CMAKE_INSTALL_PREFIX}/include
-#         COMPONENT
-#         headers)
+add_executable(off_vector off_vector.cu)
+add_dependencies(off_vector main)
+target_link_libraries(off_vector PUBLIC main)
+set_source_files_properties(off_vector.cu PROPERTIES LANGUAGE CUDA)
+set_target_properties(off_vector PROPERTIES
+        CUDA_SEPARABLE_COMPILATION ON
+#        CUDA_RUNTIME_LIBRARY Shared
+#        POSITION_INDEPENDENT_CODE ON
+)

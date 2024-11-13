@@ -1,4 +1,5 @@
 #include <fstream>
+#include <stdfloat>
 #include <vector>
 #include <iostream>
 
@@ -14,10 +15,10 @@ int main(int argc, char* agrv[]){
     }
 
     // Container for the matrix
-    std::vector<float> matrix(N *N);
+    std::vector<std::bfloat16_t> matrix(N *N);
 
     // Load the file in the matix
-    file.read(reinterpret_cast<char*>(matrix.data()), 4*N*N); // One char is one byte, bfloat16 is two bytes, float is four bytes
+    file.read(reinterpret_cast<char*>(matrix.data()), 2*N*N); // One char is one byte, bfloat16 is two bytes
 
     // Close the file
     file.close();
@@ -25,7 +26,7 @@ int main(int argc, char* agrv[]){
         throw std::runtime_error("Error occurred while reading the file");
     }
 
-    for (float c : matrix){
+    for (std::bfloat16_t c : matrix){
         std::cout << c << std::endl;
     }
 
