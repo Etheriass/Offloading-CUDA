@@ -12,18 +12,16 @@ private:
     size_t *d_size; // pointer to size of the vector on device
     size_t *h_size; // pointer to size of the vector on host
     std::string filename;
-    bool *h_need_load; // flag to indicate if data needs to be loaded (on host)
+    bool *d_need_load; // flag to indicate if data needs to be loaded (on device)
 
-    __host__ void load_chunk(size_t start, size_t chunk_size, cudaStream_t stream);
+    __host__ void load_chunk(size_t start, size_t chunk_size);
 
 public:
-    bool *d_need_load; // flag to indicate if data needs to be loaded (on device)
-    cudaEvent_t needLoadEvent; // Event to signal the host
     OffVector(size_t N, std::string filename);
     ~OffVector();
 
     __device__ float& operator[](size_t i);
-    __host__ void check_and_load(cudaStream_t stream);
+    __host__ void check_and_load();
 };
 
 #endif
