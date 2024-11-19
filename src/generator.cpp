@@ -3,7 +3,7 @@
 #include <random> // fir random, gen..
 #include <fstream> // for ofstream, file
 
-#define SIZE 10
+#define SIZE 100
 
 
 void generate(const std::string& filename, size_t N){

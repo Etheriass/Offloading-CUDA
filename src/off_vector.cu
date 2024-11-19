@@ -17,78 +17,65 @@ class OffVector
 {
 private:
     float *d_data;
-    size_t size;    // real size of the vector
-    size_t *d_size; // pointer to size of the vector on device
-    size_t *h_size; // pointer to size of the vector on host
     std::string filename;
-    bool *d_need_load; // flag to indicate if data needs to be loaded (on device)
-    bool h_need_load; // copy
-
-    __host__ void load_chunk(size_t start, size_t chunk_size);
 
 public:
+    size_t size;    // real size of the vector
+    size_t d_size; // pointer to size of the vector on device
+    int d_need_load; // flag to indicate if data needs to be loaded (on device)
+    int h_need_load; // copy
     OffVector(size_t N, std::string filename);
     ~OffVector();
 
     __device__ float& operator[](size_t i);
-    __host__ void check_and_load();
+    // __host__ void check_and_load();
+    __host__ void load_chunk(size_t chunk_size);
 };
 
-OffVector::OffVector(size_t N, std::string filename) : size(N), filename(filename), h_need_load(false) {
+OffVector::OffVector(size_t N, std::string filename) : size(N), filename(filename), h_need_load(0), d_need_load(0), d_size(0) {
     printf("Creating Vector of size %lu from file \"%s\"\n", N, filename.c_str());
     CHECK_CUDA(cudaMalloc(&d_data, N * sizeof(float)));
 
-    h_size = new size_t(0);
-    CHECK_CUDA(cudaMalloc(&d_size, sizeof(size_t)));
-    CHECK_CUDA(cudaMemcpy(d_size, &h_size, sizeof(size_t), cudaMemcpyHostToDevice));
-
-    CHECK_CUDA(cudaMalloc(&d_need_load, sizeof(bool)));
-    CHECK_CUDA(cudaMemcpy(d_need_load, &h_need_load, sizeof(bool), cudaMemcpyHostToDevice));
-    // CHECK_CUDA(cudaMemcpy(&h_need_load, d_need_load, sizeof(bool), cudaMemcpyDeviceToHost));
-    // printf("Init load: %d\n", *h_need_load);
-
-    load_chunk(0, N); // Load first chunk
+    load_chunk(N); // Load first chunk
 }
 
 OffVector::~OffVector(){
     cudaFree(d_data);
-    cudaFree(d_size);
-    cudaFree(d_need_load);
-    delete h_size;
 }
+
 
 __device__ float& OffVector::operator[](size_t i){
     printf("Accessing element %lu:", i);
-    if (i >= *d_size){
-        // auto grid = cooperative_groups::this_grid();
-        // printf("\nNeed to load...\n");
-        // *d_need_load = true;
+    if (i >= d_size){
+        auto grid = cooperative_groups::this_grid();
+        printf("\nNeed to load...\n");
+        d_need_load = 1;
         // grid.sync();
+        printf("HELLO\n");
+        // __threadfence();
+        int looping = d_need_load;
 
-        // while (i >= *d_size){} // Wait for data to be loaded
+        // while (i >= d_size){} // Wait for data to be loaded
+        while (looping){
+            looping = d_need_load;
+            if (d_need_load == 0){
+                break;
+            }
+            // printf("Looping: %d", looping);
+        }
+        
+        printf("RELEASED\n");
+        d_data = d_data;
+        for (size_t i = 0; i <size; i++){
+            printf("->>%f\n", d_data[i]);
+        }
     }
     return d_data[i % size];
 }
 
-__host__ void OffVector::check_and_load(){
-    printf("Checking if we need to load...\n");
 
-    // cudaMemcpy(&h_need_load, d_need_load, sizeof(bool), cudaMemcpyDeviceToHost);
-    CHECK_CUDA(cudaMemcpy(&h_need_load, d_need_load, sizeof(bool), cudaMemcpyDeviceToHost)); // ERROR: invalid argument
-
-    printf("need_load: %d\n", h_need_load);
-
-    if (h_need_load)
-    {
-        load_chunk(*h_size, 10); // Load the next chunk
-        h_need_load = false;
-        CHECK_CUDA(cudaMemcpy(d_need_load, &h_need_load, sizeof(bool), cudaMemcpyHostToDevice));
-    } else {
-        printf("No load needed\n");
-    }
-}
-
-__host__ void OffVector::load_chunk(size_t start, size_t size){
+__host__ void OffVector::load_chunk(size_t size){
+    size_t start = d_size;
     printf("Loading chunk from %lu to %lu\n", start, start + size);
    
     float *host_data = new float[size];
@@ -114,10 +101,15 @@ __host__ void OffVector::load_chunk(size_t start, size_t size){
     }
 
     file.close();
+    printf("Elements read: %d\n", elements_read);
+    CHECK_CUDA(cudaMemcpy(d_data, host_data, elements_read * sizeof(float), cudaMemcpyHostToDevice));
+    // cudaMemcpy(d_data, host_data, elements_read * sizeof(float), cudaMemcpyHostToDevice);
+    d_size += elements_read;
 
-    CHECK_CUDA(cudaMemcpy(d_data + start, host_data, elements_read * sizeof(float), cudaMemcpyHostToDevice));
-    *h_size += elements_read;
-    CHECK_CUDA(cudaMemcpy(d_size, &h_size, sizeof(size_t), cudaMemcpyHostToDevice));
+    for (size_t i = 0; i <size; i++){
+        printf("->%f\n", host_data[i]);
+    }
+    cudaDeviceSynchronize();
 
     delete[] host_data;
 }
