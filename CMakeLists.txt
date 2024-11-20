@@ -44,7 +44,7 @@ find_package(Boost COMPONENTS system filesystem REQUIRED)
 # Enable Testing
 #-----------------------------------------------------------------------------
 include(CTest)
-if(CMAKE_PROJECT_NAME STREQUAL EnlargindTensors AND BUILD_TESTING)
+if(CMAKE_PROJECT_NAME STREQUAL EnlargingTensors AND BUILD_TESTING)
     enable_testing()
 endif()
 
