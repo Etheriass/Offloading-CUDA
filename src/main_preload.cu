@@ -46,7 +46,7 @@ public:
             throw std::runtime_error("Failed to seek to position in file");
         }
         size_t elements_to_read = layer_rows[layer_index] * layer_cols[layer_index];
-        host_matrix.resize(elements_to_read);
+        // host_matrix.resize(elements_to_read);
         file.read(reinterpret_cast<char*>(host_matrix.data()), elements_to_read * sizeof(float));
     }
 
@@ -105,8 +105,12 @@ void runInference(const std::string &filename, size_t total_layers, std::vector<
     cudaMalloc(&device_result, matrices.getMaxLayerSize() * sizeof(float));
     cudaMemcpy(device_vector, host_vector.data(), layer_cols[0] * sizeof(float), cudaMemcpyHostToDevice);
 
-    std::vector<float> preloaded_matrix;
+    std::vector<float> preloaded_matrix(layer_rows[0] * layer_cols[0]);
+    auto start_preloading = std::chrono::high_resolution_clock::now();
     matrices.preloadLayer(0, preloaded_matrix);
+    auto end_preloading = std::chrono::high_resolution_clock::now();
+    auto duration_preloading = std::chrono::duration_cast<std::chrono::microseconds>(end_preloading - start_preloading);
+    std::cout << "Preloading layer 0 took: " << duration_preloading.count() << " us" << std::endl;
 
     // Sequentially multiply with each layer
     for (size_t layer_index = 0; layer_index < total_layers; ++layer_index) {
@@ -115,20 +119,26 @@ void runInference(const std::string &filename, size_t total_layers, std::vector<
 
         // Load the layer matrix
         auto start_loading_layer = std::chrono::high_resolution_clock::now();
+        // std::cout << "Loading layer " << layer_index << std::endl;
         matrices.loadPreloadedLayer(preloaded_matrix);
         auto end_loading_layer = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_loading_layer - start_loading_layer);
         std::cout << "Loading layer " << layer_index << " took: " << duration.count() << " us" << std::endl;
 
+        auto start_preloading = std::chrono::high_resolution_clock::now();
         if (layer_index + 1 < total_layers) {
             matrices.preloadLayer(layer_index + 1, preloaded_matrix);
         }
+        auto end_preloading = std::chrono::high_resolution_clock::now();
+        auto duration_preloading = std::chrono::duration_cast<std::chrono::microseconds>(end_preloading - start_preloading);
+        std::cout << "Preloading layer " << layer_index + 1 << " took: " << duration_preloading.count() << " us" << std::endl;
 
         size_t threads_per_block = 256;
         size_t blocks_per_grid = (rows + threads_per_block - 1) / threads_per_block;
 
         // Multiply the matrix with the input vector
         auto start_layer_multiplication = std::chrono::high_resolution_clock::now();
+        // std::cout << "Multiplying layer " << layer_index << std::endl;
         matVecMul<<<blocks_per_grid, threads_per_block>>>(matrices.getLayer(layer_index), device_vector, device_result, rows, cols);
         cudaDeviceSynchronize();
         auto end_layer_multiplication = std::chrono::high_resolution_clock::now();
@@ -136,13 +146,17 @@ void runInference(const std::string &filename, size_t total_layers, std::vector<
         std::cout << "Multiplying layer " << layer_index << " took: " << duration_layer_multiplication.count() << " us" << std::endl;
 
         // Update the input vector for the next iteration
+        auto start_copying_result = std::chrono::high_resolution_clock::now();
         cudaFree(device_vector);
         cudaMalloc(&device_vector, rows * sizeof(float));
         cudaMemcpy(device_vector, device_result, rows * sizeof(float), cudaMemcpyDeviceToDevice);
+        auto end_copying_result = std::chrono::high_resolution_clock::now();
+        auto duration_copying_result = std::chrono::duration_cast<std::chrono::microseconds>(end_copying_result - start_copying_result);
+        std::cout << "Copying result " << layer_index << " took: " << duration_copying_result.count() << " us" << std::endl;
 
-        if (layer_index == total_layers - 1) {
-            host_vector.resize(rows);
-        }
+        // if (layer_index == total_layers - 1) {
+        //     host_vector.resize(rows);
+        // }
     }
 
     cudaMemcpy(host_vector.data(), device_result, host_vector.size() * sizeof(float), cudaMemcpyDeviceToHost);
