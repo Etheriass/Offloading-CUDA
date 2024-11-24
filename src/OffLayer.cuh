@@ -5,11 +5,12 @@
 #include <fstream>
 #include <vector>
 
-/* OffLayer class 
-*  This class is used to load layers of a simulated LLM reduce to a set of matrices
-*  The matrices are stored in a binary file
+/* 
+*  This class is used to load layers of a simulated LLM reduce to a set of matrices.
+*  The matrices are stored in a binary file.
+*  It load 2 layers in main memory at a time to allow for double buffering.
+*  The layers are loaded in the GPU memory using cudaMemcpyAsync.
 */
-
 class OffLayer {
 private:
     size_t total_layers;

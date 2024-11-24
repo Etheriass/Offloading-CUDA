@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
 
     const std::string &filename = argv[1];
     size_t total_layers = std::stoi(argv[2]);
-    size_t layers_dim = std::stoi(argv[3]);
+    size_t layers_dim = std::stoi(argv[3]); // We assume all layers are square and have the same dimensions
     std::vector<size_t> layer_rows;
     std::vector<size_t> layer_cols;
     for (size_t i = 0; i < total_layers; ++i) {

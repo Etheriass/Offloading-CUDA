@@ -43,7 +43,6 @@ void OffLayer::loadPreloadedLayer(float *host_matrix, float *next_host_matrix, s
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     std::cout << "MemcpyAsync of layer " << layer_index << " took: " << duration.count() << " us" << std::endl;
-    // std::cout << "MemcpyAsync took: " << duration.count() << " us" << std::endl;
 }
 
 size_t OffLayer::getLayerRows(size_t layer_index){

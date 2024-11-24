@@ -18,9 +18,9 @@ To compile directly use:
 
 To run the program use:
 ```bash 
-./main <filename> <number of layers>
+./main <filename> <number of layers> <size of layers>
 ``` 
-Example wit an LLM of 2 layers: `./main matrix.bin 2`
+Example wit an LLM of 2 layers of size $1000 \times 1000$: `./main matrix.bin 2 1000`
 
 ### CMAKE
 
@@ -56,3 +56,5 @@ To run the program use:
 ```bash
 ./main <filename> <number of layers>
 ```
+
+
